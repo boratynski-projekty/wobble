@@ -7,7 +7,7 @@ Nazwa produktu: **Wobble** (zatwierdzona 2026-07-22).
 
 ## 0. Streszczenie w jednym akapicie
 
-Web-app (Next.js na Vercel + Supabase) w formie PWA, mobile-first, w której lista zadań 
+Web-app (Next.js na Vercel + Supabase) w formie PWA, mobile-first, w której lista zadań
 na dany dzień jest renderowana jako wieża Jenga. Klocki fundamentowe (koralowe) leżą
 u podstawy, opcjonalne (szare) wyżej. Wykonanie zadania = wyjęcie klocka. Wieczorem dzień
 się „zamyka": wszystkie fundamenty zrobione → wieża stoi; choć jeden nie → animacja
