@@ -1,10 +1,10 @@
 /**
- * Deterministyczny przechył klocka.
+ * Deterministyczna geometria klocka.
  *
  * Wieża ma wyglądać na ułożoną ręcznie, a nie wygenerowaną z tabelki — każdy klocek
- * dostaje drobny, losowy przechył i przesunięcie w poziomie. Musi to być jednak
- * deterministyczne: ten sam klocek ma wyglądać identycznie po odświeżeniu strony,
- * przy renderze serwerowym i po cofnięciu ukończenia (zob. PLAN.md 4a).
+ * dostaje drobny przechył, przesunięcie w poziomie i lekko inną szerokość. Musi to
+ * być jednak deterministyczne: ten sam klocek ma wyglądać identycznie po odświeżeniu
+ * strony, przy renderze serwerowym i po cofnięciu ukończenia (zob. PLAN.md 4a).
  * Dlatego źródłem "losowości" jest zapisany w bazie `seed` klocka, nie Math.random().
  */
 
@@ -36,4 +36,15 @@ export function blockTilt(seed: number, isFoundation = false): BlockTilt {
     rotate: (random(seed) * 2 - 1) * MAX_TILT_DEG * damping,
     offsetX: (random(seed + 1) * 2 - 1) * MAX_OFFSET_PX * damping,
   };
+}
+
+/**
+ * Szerokość klocka jako procent szerokości wieży. Fundamenty są pełne i szerokie
+ * (dźwigają wieżę), klocki opcjonalne trochę węższe i każdy inny — dzięki temu
+ * krawędzie wieży nie tworzą jednej płaskiej kolumny, tylko widać osobne kawałki.
+ */
+export function blockWidthPct(seed: number, isFoundation = false): number {
+  if (isFoundation) return 100;
+  // 86–98% — węższe niż fundament, ale wciąż mieszczące tekst zadania.
+  return 86 + random(seed + 2) * 12;
 }
