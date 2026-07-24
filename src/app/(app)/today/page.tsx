@@ -6,7 +6,6 @@ import {
 } from "@/lib/tower/queries";
 import { Tower } from "@/components/tower";
 import { AddBlockForm } from "@/components/add-block-form";
-import { survivesTheDay } from "@/lib/tower/order";
 
 export default async function TodayPage() {
   const supabase = await createClient();
@@ -18,15 +17,14 @@ export default async function TodayPage() {
   const tower = await getOrCreateTodayTower(supabase, user!.id, timezone);
   const blocks = await getBlocks(supabase, tower.id);
 
-  const foundations = blocks.filter((b) => b.kind === "foundation");
-  const pendingFoundations = foundations.filter((b) => !b.done_at).length;
+  const pending = blocks.filter((b) => !b.done_at).length;
 
   return (
     <main className="flex flex-col gap-8">
       <header className="space-y-1">
         <p className="text-muted text-sm">{formatDate(tower.local_date)}</p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {headline(blocks.length, pendingFoundations, survivesTheDay(blocks))}
+          {headline(blocks.length, pending)}
         </h1>
       </header>
 
@@ -37,19 +35,12 @@ export default async function TodayPage() {
   );
 }
 
-/** Nagłówek mówi, co jest do zrobienia — bez oceniania i bez pogania. */
-function headline(
-  total: number,
-  pendingFoundations: number,
-  survives: boolean,
-): string {
+/** Nagłówek mówi, ile zostało — bez oceniania i bez pogania. */
+function headline(total: number, pending: number): string {
   if (total === 0) return "Pusta wieża czeka";
-  if (pendingFoundations > 0) {
-    return pendingFoundations === 1
-      ? "Został jeden fundament"
-      : `Zostały ${pendingFoundations} fundamenty`;
-  }
-  return survives ? "Fundamenty zrobione" : "Twoja wieża";
+  if (pending === 0) return "Wieża rozebrana 🎉";
+  if (pending === 1) return "Został ostatni klocek";
+  return `${pending} klocki do wyjęcia`;
 }
 
 function formatDate(localDate: string): string {

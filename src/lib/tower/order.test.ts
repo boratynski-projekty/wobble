@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortForTower, survivesTheDay } from "./order";
+import { byPriority, stackFromBottom } from "./order";
 import type { Block } from "./types";
 
 function block(p: Partial<Block> & { id: string }): Block {
@@ -13,22 +13,14 @@ function block(p: Partial<Block> & { id: string }): Block {
   };
 }
 
-describe("sortForTower", () => {
-  it("kładzie fundamenty na dole wieży", () => {
-    const out = sortForTower([
-      block({ id: "f", kind: "foundation", position: 1 }),
-      block({ id: "o", kind: "optional", position: 2 }),
+describe("byPriority", () => {
+  it("najważniejsze (wyższa pozycja) na górze wieży", () => {
+    const out = byPriority([
+      block({ id: "niska", position: 1 }),
+      block({ id: "wysoka", position: 5 }),
+      block({ id: "srednia", position: 3 }),
     ]);
-    // Ostatni element listy = podstawa wieży.
-    expect(out.at(-1)!.id).toBe("f");
-  });
-
-  it("nowsze klocki układa wyżej w obrębie grupy", () => {
-    const out = sortForTower([
-      block({ id: "stary", position: 1 }),
-      block({ id: "nowy", position: 5 }),
-    ]);
-    expect(out.map((b) => b.id)).toEqual(["nowy", "stary"]);
+    expect(out.map((b) => b.id)).toEqual(["wysoka", "srednia", "niska"]);
   });
 
   it("nie mutuje wejścia", () => {
@@ -37,35 +29,17 @@ describe("sortForTower", () => {
       block({ id: "b", position: 2 }),
     ];
     const copy = [...input];
-    sortForTower(input);
+    byPriority(input);
     expect(input).toEqual(copy);
   });
 });
 
-describe("survivesTheDay", () => {
-  it("stoi, gdy wszystkie fundamenty zrobione — nawet z zaległymi opcjonalnymi", () => {
-    expect(
-      survivesTheDay([
-        block({ id: "f", kind: "foundation", done_at: "2026-07-24T10:00:00Z" }),
-        block({ id: "o", kind: "optional", done_at: null }),
-      ]),
-    ).toBe(true);
-  });
-
-  it("zawala się, gdy choć jeden fundament został niezrobiony", () => {
-    expect(
-      survivesTheDay([
-        block({
-          id: "f1",
-          kind: "foundation",
-          done_at: "2026-07-24T10:00:00Z",
-        }),
-        block({ id: "f2", kind: "foundation", done_at: null }),
-      ]),
-    ).toBe(false);
-  });
-
-  it("pusta wieża stoi — brak zadań to nie porażka", () => {
-    expect(survivesTheDay([])).toBe(true);
+describe("stackFromBottom", () => {
+  it("odwraca kolejność — najmniej ważne na spodzie stosu", () => {
+    const out = stackFromBottom([
+      block({ id: "wysoka", position: 5 }),
+      block({ id: "niska", position: 1 }),
+    ]);
+    expect(out.map((b) => b.id)).toEqual(["niska", "wysoka"]);
   });
 });

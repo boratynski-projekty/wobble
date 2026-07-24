@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateTodayTower, getTimezone } from "@/lib/tower/queries";
-import type { BlockKind } from "@/lib/tower/types";
 
 /**
  * Każda mutacja klocka dopisuje wiersz do block_events. To jest fundament pod
@@ -36,23 +35,17 @@ async function currentTower() {
 }
 
 /**
- * Dodanie zadania. Próg wejścia ma być minimalny: jedno pole + jeden tap na
- * kategorię, bez dodatkowych kroków (koncepcja, 3.1).
+ * Dodanie zadania. Próg wejścia minimalny: jedno pole, bez kategorii.
+ * Nowy klocek ląduje na górze wieży (najwyższa pozycja = najwyższy priorytet);
+ * kolejność zmienia się potem ręcznie.
  */
 export async function addBlock(formData: FormData): Promise<void> {
   const title = String(formData.get("title") ?? "").trim();
-  const kind = (
-    String(formData.get("kind") ?? "optional") === "foundation"
-      ? "foundation"
-      : "optional"
-  ) as BlockKind;
-
   if (!title) return;
 
   const { supabase, tower } = await currentTower();
 
-  // Nowy klocek ląduje na wierzchu swojej grupy.
-  const { data: last } = await supabase
+  const { data: top } = await supabase
     .from("blocks")
     .select("position")
     .eq("tower_id", tower.id)
@@ -65,15 +58,47 @@ export async function addBlock(formData: FormData): Promise<void> {
     .insert({
       tower_id: tower.id,
       title: title.slice(0, 200),
-      kind,
-      position: (last?.position ?? 0) + 1,
+      position: (top?.position ?? 0) + 1,
     })
     .select("id")
     .single();
 
   if (created) {
-    await logEvent(supabase, tower.id, created.id, "created", { title, kind });
+    await logEvent(supabase, tower.id, created.id, "created", { title });
   }
+
+  revalidatePath("/today");
+}
+
+/**
+ * Zmiana priorytetu klocka — przesunięcie w górę/dół wieży. Zamieniamy pozycję
+ * z sąsiadem w danym kierunku (wyżej = ważniejsze).
+ */
+export async function moveBlock(
+  blockId: string,
+  direction: "up" | "down",
+): Promise<void> {
+  const { supabase, tower } = await currentTower();
+
+  const { data: blocks } = await supabase
+    .from("blocks")
+    .select("id, position")
+    .eq("tower_id", tower.id)
+    .is("deleted_at", null)
+    .is("done_at", null)
+    .order("position", { ascending: false });
+
+  if (!blocks) return;
+
+  // Lista jest od góry (najważniejsze) do dołu; „up" = w stronę początku listy.
+  const idx = blocks.findIndex((b) => b.id === blockId);
+  const neighbor = direction === "up" ? idx - 1 : idx + 1;
+  if (idx < 0 || neighbor < 0 || neighbor >= blocks.length) return;
+
+  const a = blocks[idx];
+  const b = blocks[neighbor];
+  await supabase.from("blocks").update({ position: b.position }).eq("id", a.id);
+  await supabase.from("blocks").update({ position: a.position }).eq("id", b.id);
 
   revalidatePath("/today");
 }
